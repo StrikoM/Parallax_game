@@ -1,0 +1,46 @@
+# This is a standard Unity gitignore file
+
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+
+# Memory dumps
+*.apk
+*.unitypackage
+
+# Visual Studio / Rider cache and generated files
+.vs/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity WebGL local configuration
+Assets/WebGLTemplates/*/TemplateData/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Custom backup files
+/ParallaxGame_Backup.zip
+/inspect_output.txt
+/original_gamescene.txt
+/scene_hierarchy_dump.txt
+/erase_stamps.py
