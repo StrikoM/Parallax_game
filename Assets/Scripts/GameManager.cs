@@ -2466,6 +2466,7 @@ public class GameManager : MonoBehaviour
             
             Button btn = btnObj.AddComponent<Button>();
             btn.onClick.AddListener(ReturnToMenu);
+            btnObj.AddComponent<MenuButtonHoverEffects>();
             
             GameObject txtObj = new GameObject("BtnText");
             txtObj.transform.SetParent(btnObj.transform, false);
@@ -2489,6 +2490,10 @@ public class GameManager : MonoBehaviour
             {
                 btn.onClick.RemoveAllListeners();
                 btn.onClick.AddListener(ReturnToMenu);
+                if (btn.GetComponent<MenuButtonHoverEffects>() == null)
+                {
+                    btn.gameObject.AddComponent<MenuButtonHoverEffects>();
+                }
             }
         }
 
@@ -2523,6 +2528,10 @@ public class GameManager : MonoBehaviour
                 {
                     btn.onClick.RemoveAllListeners();
                     btn.onClick.AddListener(LoadNextShift);
+                    if (btn.GetComponent<MenuButtonHoverEffects>() == null)
+                    {
+                        btn.gameObject.AddComponent<MenuButtonHoverEffects>();
+                    }
                 }
             }
         }
@@ -2558,6 +2567,10 @@ public class GameManager : MonoBehaviour
                 {
                     btn.onClick.RemoveAllListeners();
                     btn.onClick.AddListener(LoadNextShift);
+                    if (btn.GetComponent<MenuButtonHoverEffects>() == null)
+                    {
+                        btn.gameObject.AddComponent<MenuButtonHoverEffects>();
+                    }
                 }
             }
         }
