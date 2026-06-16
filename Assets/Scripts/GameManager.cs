@@ -92,6 +92,7 @@ public class GameManager : MonoBehaviour
     private bool isPaused = false;
     private float lastToggleTime = -1f;
     private bool loggedPausePanelNull = false;
+    private GameObject pauseTapePlayerPanel;
 
     [Header("Кнопка Допроса")]
     public Button interrogateBtn;
@@ -160,6 +161,7 @@ public class GameManager : MonoBehaviour
 
         // Предварительно стилизуем экраны при старте
         StylizeEndScreensRuntime();
+        CreateRulesButtonRuntime();
 
         // Гарантируем, что оверлеи не будут блокировать мышь на протяжении всей игры
         DisableRaycastOnOverlay("DecontaminationGas");
@@ -401,6 +403,12 @@ public class GameManager : MonoBehaviour
             TogglePause();
         }
 
+        // Чит-код F10 для быстрого завершения смены и тестирования скриншотов диплома
+        if (Input.GetKeyDown(KeyCode.F10))
+        {
+            EndShift("Смена завершена чит-кодом (F10)");
+        }
+
         VisitorData currentVisitor = (isShiftActive && currentShift != null && currentVisitorIndex < currentShift.shiftVisitors.Length) 
             ? currentShift.shiftVisitors[currentVisitorIndex] : null;
 
@@ -526,6 +534,9 @@ public class GameManager : MonoBehaviour
         // Прячем кнопку паузы, чтобы она не перекрывала экран поражения
         if (pauseButton != null) pauseButton.gameObject.SetActive(false);
 
+        // Прячем кнопку правил, чтобы она не перекрывала экран поражения
+        if (rulesButtonObj != null) rulesButtonObj.SetActive(false);
+
         // Применяем динамическую стилизацию панелей
         StylizeEndScreensRuntime();
 
@@ -571,24 +582,36 @@ public class GameManager : MonoBehaviour
             victoryPanel.SetActive(true);
             victoryPanel.transform.SetAsLastSibling(); // Гарантируем, что панель победы будет поверх монитора!
             
-            // Воспроизводим ретро-звук при победе (например, телефонный клик/пиканье)
-            if (sfxAudioSource != null && phonePickupSound != null)
+            // Воспроизводим ретро-звук при победе (фанфары!)
+            if (sfxAudioSource != null)
             {
-                sfxAudioSource.PlayOneShot(phonePickupSound);
+                AudioClip fanfare = CreateVictoryFanfare();
+                sfxAudioSource.PlayOneShot(fanfare, 0.8f);
             }
 
             // Прячем кнопку паузы, чтобы она не перекрывала экран победы
             if (pauseButton != null) pauseButton.gameObject.SetActive(false);
+
+            // Прячем кнопку правил, чтобы она не перекрывала экран победы
+            if (rulesButtonObj != null) rulesButtonObj.SetActive(false);
 
             // Применяем динамическую стилизацию панелей (перед скрытием кнопки NextShiftBtn, если она выключается!)
             StylizeEndScreensRuntime();
 
             if (victoryStatsText != null) 
             {
-                if (currentShiftIndex + 1 >= shiftsDatabase.Length)
+                                if (currentShiftIndex + 1 >= shiftsDatabase.Length)
                 {
                     victoryStatsText.text = "ВЫ ПРОШЛИ ИГРУ!\n\nВсе смены завершены.\nМонстры не прошли.";
                     
+                    // Поменяем заголовок на "ИГРА ПРОЙДЕНА"
+                    Transform titleTrans = victoryPanel.transform.Find("Clipboard/TitleText");
+                    if (titleTrans != null)
+                    {
+                        TextMeshProUGUI titleTmp = titleTrans.GetComponent<TextMeshProUGUI>();
+                        if (titleTmp != null) titleTmp.text = "ИГРА ПРОЙДЕНА";
+                    }
+
                     // Прячем кнопку "Продолжить смену" (проверяем оба варианта имени кнопки)
                     Button[] btns = victoryPanel.GetComponentsInChildren<Button>(true);
                     foreach(var b in btns) {
@@ -597,6 +620,9 @@ public class GameManager : MonoBehaviour
 
                     // Перестраиваем кнопки после сокрытия NextShiftBtn, чтобы кнопка ExitMenu была в центре
                     StylizeEndScreensRuntime();
+
+                    // Запускаем секретную финальную анимацию поздравления!
+                    StartCoroutine(FinalVictorySequence(victoryPanel));
                 }
                 else
                 {
@@ -713,7 +739,14 @@ public class GameManager : MonoBehaviour
 
         if (isGameOver)
         {
-            GameOver(gameOverReason);
+            if (isApprove)
+            {
+                yield return StartCoroutine(AnimateApproveBeforeGameOver(gameOverReason));
+            }
+            else
+            {
+                yield return StartCoroutine(AnimateRejectBeforeGameOver(gameOverReason));
+            }
             yield break;
         }
 
@@ -726,6 +759,107 @@ public class GameManager : MonoBehaviour
         {
             StartCoroutine(AnimateRejectAndLoadNext());
         }
+    }
+
+    private IEnumerator AnimateApproveBeforeGameOver(string reason)
+    {
+        isAnimating = true;
+        lastActionWasApprove = true;
+        
+        float duration = 1.0f;
+        float elapsed = 0f;
+        
+        Vector3 trayOpenPos = originalTrayPos;
+        Vector3 trayClosedPos = originalTrayPos + new Vector3(0f, -600f, 0f);
+        
+        Vector3 visitorStart = originalVisitorPos;
+        Vector3 visitorTarget = originalVisitorPos + new Vector3(800f, 0f, 0f);
+        
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            
+            if (visitorImageDisplay != null) visitorImageDisplay.rectTransform.anchoredPosition = Vector3.Lerp(visitorStart, visitorTarget, t);
+            if (documentTray != null) documentTray.anchoredPosition = Vector3.Lerp(trayOpenPos, trayClosedPos, t);
+            
+            yield return null;
+        }
+        
+        GameOver(reason);
+    }
+
+    private IEnumerator AnimateRejectBeforeGameOver(string reason)
+    {
+        isAnimating = true;
+        lastActionWasApprove = false;
+        
+        float duration = 1.0f;
+        float elapsed = 0f;
+        
+        Vector3 shutterOpenPos = originalShutterPos + new Vector3(0f, 800f, 0f);
+        Vector3 shutterClosedPos = originalShutterPos; 
+        
+        Vector3 trayOpenPos = originalTrayPos;
+        Vector3 trayClosedPos = originalTrayPos + new Vector3(0f, -600f, 0f);
+        
+        Vector3 guardLeftTarget = guardLeftStartPos + new Vector3(400f, 0f, 0f);
+        Vector3 guardRightTarget = guardRightStartPos + new Vector3(-400f, 0f, 0f);
+        
+        if (guardLeft != null && guardWalkingSprite != null) guardLeft.GetComponent<Image>().sprite = guardWalkingSprite;
+        if (guardRight != null && guardWalkingSprite != null) 
+        {
+            guardRight.GetComponent<Image>().sprite = guardWalkingSprite;
+            guardRight.localScale = new Vector3(-Mathf.Abs(originalGuardRightScale.x), originalGuardRightScale.y, originalGuardRightScale.z);
+        }
+
+        float guardDuration = 0.8f;
+        while (elapsed < guardDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / guardDuration; 
+            
+            if (documentTray != null) documentTray.anchoredPosition = Vector3.Lerp(trayOpenPos, trayClosedPos, t);
+            if (guardLeft != null) guardLeft.anchoredPosition = Vector3.Lerp(guardLeftStartPos, guardLeftTarget, t);
+            if (guardRight != null) guardRight.anchoredPosition = Vector3.Lerp(guardRightStartPos, guardRightTarget, t);
+            
+            yield return null; 
+        }
+
+        if (guardLeft != null && guardHoldingSprite != null) guardLeft.GetComponent<Image>().sprite = guardHoldingSprite;
+        if (guardRight != null && guardHoldingSprite != null) guardRight.GetComponent<Image>().sprite = guardHoldingSprite;
+
+        elapsed = 0f;
+        if (sfxAudioSource != null && shutterCloseSound != null)
+        {
+            sfxAudioSource.PlayOneShot(shutterCloseSound);
+        }
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration; 
+            
+            if (windowShutter != null) windowShutter.anchoredPosition = Vector3.Lerp(shutterOpenPos, shutterClosedPos, t);
+            
+            yield return null; 
+        }
+
+        yield return new WaitForSeconds(1.5f);
+        
+        if (guardLeft != null) 
+        {
+            guardLeft.anchoredPosition = guardLeftStartPos;
+            if (defaultGuardSprite != null) guardLeft.GetComponent<Image>().sprite = defaultGuardSprite;
+        }
+        if (guardRight != null) 
+        {
+            guardRight.anchoredPosition = guardRightStartPos;
+            guardRight.localScale = originalGuardRightScale;
+            if (defaultGuardSprite != null) guardRight.GetComponent<Image>().sprite = defaultGuardSprite;
+        }
+
+        GameOver(reason);
     }
 
     // Флаг, чтобы знать, как вводить следующего посетителя
@@ -787,7 +921,7 @@ public class GameManager : MonoBehaviour
             guardRight.localScale = new Vector3(-Mathf.Abs(originalGuardRightScale.x), originalGuardRightScale.y, originalGuardRightScale.z); // Поворачиваем налево
         }
 
-        float guardDuration = 0.5f;
+        float guardDuration = 0.8f;
         while (elapsed < guardDuration)
         {
             elapsed += Time.deltaTime;
@@ -923,7 +1057,7 @@ public class GameManager : MonoBehaviour
                 if (guardWalkingSprite != null) guardLeft.GetComponent<Image>().sprite = guardWalkingSprite;
 
                 elapsed = 0f;
-                float walkDuration = 0.5f;
+                float walkDuration = 0.8f;
                 while (elapsed < walkDuration)
                 {
                     elapsed += Time.deltaTime;
@@ -956,7 +1090,7 @@ public class GameManager : MonoBehaviour
 
                 Vector3 guardExitPos = originalVisitorPos + new Vector3(800f, 0f, 0f);
                 elapsed = 0f;
-                float walkDuration = 0.5f;
+                float walkDuration = 1.6f;
                 while (elapsed < walkDuration)
                 {
                     elapsed += Time.deltaTime;
@@ -1275,6 +1409,9 @@ public class GameManager : MonoBehaviour
         }
 
         Debug.Log("[GameManager] Все кнопки найдены и подключены автоматически.");
+        
+        // Создаем кнопку магнитофона внутри меню паузы
+        CreatePauseTapePlayerButton();
     }
 
     public void ReturnToMainMenu()
@@ -2111,6 +2248,62 @@ public class GameManager : MonoBehaviour
         }
         clipTrans.gameObject.SetActive(true);
 
+        // Очистка дубликатов дочерних элементов в Clipboard, чтобы избежать наложения старых кнопок и текстов
+        {
+            System.Collections.Generic.HashSet<string> seenKeys = new System.Collections.Generic.HashSet<string>();
+            System.Collections.Generic.List<GameObject> duplicatesToDestroy = new System.Collections.Generic.List<GameObject>();
+            
+            for (int i = 0; i < clipTrans.childCount; i++)
+            {
+                Transform child = clipTrans.GetChild(i);
+                if (child == null) continue;
+                
+                string childName = child.name.ToLower();
+                string key = "";
+                
+                if (childName.Contains("title"))
+                {
+                    key = "title";
+                }
+                else if (childName.Contains("stats") || childName.Contains("reason"))
+                {
+                    key = "stats";
+                }
+                else if (childName.Contains("stamp"))
+                {
+                    key = "stamp";
+                }
+                else if (childName.Contains("next") || childName.Contains("continue"))
+                {
+                    key = "nextbtn";
+                }
+                else if (childName.Contains("restart") || childName.Contains("retry"))
+                {
+                    key = "restartbtn";
+                }
+                else if (childName.Contains("menu") || childName.Contains("exit") || childName.Contains("btn") || childName.Contains("button"))
+                {
+                    key = "menubtn";
+                }
+                
+                if (!string.IsNullOrEmpty(key))
+                {
+                    if (seenKeys.Contains(key))
+                    {
+                        duplicatesToDestroy.Add(child.gameObject);
+                    }
+                    else
+                    {
+                        seenKeys.Add(key);
+                    }
+                }
+            }
+            foreach (var duplicate in duplicatesToDestroy)
+            {
+                DestroyImmediate(duplicate);
+            }
+        }
+
         // Назначаем спрайт планшета
         Image cImg = clipTrans.GetComponent<Image>();
         if (cImg == null) cImg = clipTrans.gameObject.AddComponent<Image>();
@@ -2299,6 +2492,76 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        // д) RestartBtn (только для GameOverPanel)
+        if (!isVictory)
+        {
+            Transform restartTrans = clipTrans.Find("RestartBtn");
+            if (!IsValidTransform(restartTrans)) restartTrans = clipTrans.Find("RetryBtn");
+            if (!IsValidTransform(restartTrans))
+            {
+                restartTrans = panelObj.transform.Find("RestartBtn");
+                if (!IsValidTransform(restartTrans)) restartTrans = panelObj.transform.Find("RetryBtn");
+                if (!IsValidTransform(restartTrans))
+                {
+                    restartTrans = null;
+                    foreach (Transform child in panelObj.transform)
+                    {
+                        if (child != null && (child.name.ToLower().Contains("restart") || child.name.ToLower().Contains("retry")))
+                        {
+                            restartTrans = child;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (IsValidTransform(restartTrans))
+            {
+                restartTrans.SetParent(clipTrans, false);
+                restartTrans.name = "RestartBtn";
+                Button btn = restartTrans.GetComponent<Button>();
+                if (btn != null)
+                {
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(LoadNextShift);
+                }
+            }
+        }
+
+        // е) NextShiftBtn (только для VictoryPanel)
+        if (isVictory)
+        {
+            Transform nextBtnTrans = clipTrans.Find("NextShiftBtn");
+            if (!IsValidTransform(nextBtnTrans)) nextBtnTrans = clipTrans.Find("ContinueShiftBtn");
+            if (!IsValidTransform(nextBtnTrans))
+            {
+                nextBtnTrans = panelObj.transform.Find("NextShiftBtn");
+                if (!IsValidTransform(nextBtnTrans)) nextBtnTrans = panelObj.transform.Find("ContinueShiftBtn");
+                if (!IsValidTransform(nextBtnTrans))
+                {
+                    nextBtnTrans = null;
+                    foreach (Transform child in panelObj.transform)
+                    {
+                        if (child != null && (child.name.ToLower().Contains("next") || child.name.ToLower().Contains("continue")))
+                        {
+                            nextBtnTrans = child;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (IsValidTransform(nextBtnTrans))
+            {
+                nextBtnTrans.SetParent(clipTrans, false);
+                nextBtnTrans.name = "NextShiftBtn";
+                Button btn = nextBtnTrans.GetComponent<Button>();
+                if (btn != null)
+                {
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(LoadNextShift);
+                }
+            }
+        }
+
         return clipTrans;
     }
 
@@ -2338,10 +2601,23 @@ public class GameManager : MonoBehaviour
 
             if (IsValidTransform(clipboard))
             {
-                PositionElementRuntime(clipboard, "TitleText", "VictoryTitle", 110f, 28f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StatsText", "VictoryStats", 30f, 13f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", -30f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -8f, stampApprovedRu);
-                PositionElementRuntime(clipboard, "MainMenuBtn", "ExitMenuBtn", -130f, 0f, isText: false, isButton: true, new Vector2(260f, 50f));
+                // Проверяем, активна ли кнопка продолжения смены
+                Transform nextBtn = clipboard.Find("NextShiftBtn");
+                bool isNextActive = nextBtn != null && nextBtn.gameObject.activeSelf;
+
+                PositionElementRuntime(clipboard, "TitleText", "VictoryTitle", 280f, 28f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StatsText", "VictoryStats", 100f, 13f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", 0f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -8f, stampApprovedRu);
+
+                if (isNextActive)
+                {
+                    PositionElementRuntime(clipboard, "NextShiftBtn", "ContinueShiftBtn", -220f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
+                    PositionElementRuntime(clipboard, "MainMenuBtn", "ExitMenuBtn", -320f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
+                }
+                else
+                {
+                    PositionElementRuntime(clipboard, "MainMenuBtn", "ExitMenuBtn", -220f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
+                }
             }
         }
 
@@ -2373,10 +2649,11 @@ public class GameManager : MonoBehaviour
 
             if (IsValidTransform(clipboard))
             {
-                PositionElementRuntime(clipboard, "TitleText", "GameOverTitle", 110f, 28f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StatsText", "GameOverReason", 30f, 13f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", -30f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -12f, stampFiredRu);
-                PositionElementRuntime(clipboard, "MainMenuBtn", "ExitBtn", -130f, 0f, isText: false, isButton: true, new Vector2(260f, 50f));
+                PositionElementRuntime(clipboard, "TitleText", "GameOverTitle", 280f, 28f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StatsText", "GameOverReason", 40f, 13f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", 20f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -12f, stampFiredRu);
+                PositionElementRuntime(clipboard, "RestartBtn", "RetryBtn", -220f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
+                PositionElementRuntime(clipboard, "MainMenuBtn", "ExitBtn", -320f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
             }
         }
     }
@@ -2463,5 +2740,998 @@ public class GameManager : MonoBehaviour
             target.gameObject.SetActive(true);
         }
     }
-}
 
+    // ==========================================
+    // КАНВАС И ПРАВИЛА (СУРЕТ 3.4)
+    // ==========================================
+    private GameObject rulesPanelObj;
+    private GameObject rulesButtonObj;
+    private int rulesCurrentPage = 0;
+    private TextMeshProUGUI rulesContentText;
+    private TextMeshProUGUI rulesPageLabel;
+    private Button rulesPrevBtn;
+    private Button rulesNextBtn;
+
+    public void ShowRulesPanel()
+    {
+        if (sfxAudioSource != null && phonePickupSound != null) sfxAudioSource.PlayOneShot(phonePickupSound, 0.4f);
+
+        if (rulesPanelObj == null)
+        {
+            CreateRulesPanelRuntime();
+        }
+        
+        rulesPanelObj.SetActive(true);
+        rulesCurrentPage = 0;
+        UpdateRulesPageContent();
+        
+        // Пауза игры во время чтения правил
+        Time.timeScale = 0f;
+    }
+
+    public void HideRulesPanel()
+    {
+        if (sfxAudioSource != null && phonePickupSound != null) sfxAudioSource.PlayOneShot(phonePickupSound, 0.4f);
+        if (rulesPanelObj != null) rulesPanelObj.SetActive(false);
+        
+        // Снимаем паузу
+        Time.timeScale = 1f;
+    }
+
+    private void UpdateRulesPageContent()
+    {
+        if (rulesContentText == null || rulesPageLabel == null) return;
+
+        rulesPageLabel.text = $"Страница {rulesCurrentPage + 1} / 3";
+
+        switch (rulesCurrentPage)
+        {
+            case 0:
+                rulesContentText.text = 
+                    "<color=#dd8822><size=24><b>1. ОБЯЗАННОСТИ ИНСПЕКТОРА</b></size></color>\n\n" +
+                    "1. Тщательно проверяйте документы каждого гражданина.\n" +
+                    "2. Сверяйте имя, фамилию, номер паспорта и срок действия.\n" +
+                    "3. Сверяйте фото в паспорте с лицом посетителя.\n" +
+                    "4. В случае выявления несоответствий или отсутствия документов — отказывайте во въезде.\n" +
+                    "5. При обнаружении монстра/мимика немедленно используйте защитные средства.";
+                if (rulesPrevBtn != null) rulesPrevBtn.gameObject.SetActive(false);
+                if (rulesNextBtn != null) rulesNextBtn.gameObject.SetActive(true);
+                break;
+            case 1:
+                rulesContentText.text = 
+                    "<color=#dd8822><size=24><b>2. ИНСТРУКЦИЯ ПО БЕЗОПАСНОСТИ</b></size></color>\n\n" +
+                    "1. Двойные стальные ставни защищают вас от прямых атак. Держите их исправными.\n" +
+                    "2. В случае угрозы или нападения активируйте шокер.\n" +
+                    "3. Мимики могут маскироваться под обычных жителей. Изучайте досье на наличие аномалий.\n" +
+                    "4. Никогда не открывайте дверь подозрительным лицам без полной проверки документов.";
+                if (rulesPrevBtn != null) rulesPrevBtn.gameObject.SetActive(true);
+                if (rulesNextBtn != null) rulesNextBtn.gameObject.SetActive(true);
+                break;
+            case 2:
+                rulesContentText.text = 
+                    "<color=#dd8822><size=24><b>3. РЕГЛАМЕНТ ШТАМПОВАНИЯ</b></size></color>\n\n" +
+                    "1. Зеленый штамп <color=#22dd22><b>«ОДОБРЕНО»</b></color> ставится на паспорт гражданина при успешном прохождении всех проверок.\n" +
+                    "2. Красный штамп <color=#dd2222><b>«ОТКАЗАНО»</b></color> ставится при любых нарушениях протокола или подозрении на мимикрию.\n" +
+                    "3. Неправильно поставленный штамп ведет к немедленному начислению штрафа.";
+                if (rulesPrevBtn != null) rulesPrevBtn.gameObject.SetActive(true);
+                if (rulesNextBtn != null) rulesNextBtn.gameObject.SetActive(false);
+                break;
+        }
+    }
+
+    private void CreateRulesPanelRuntime()
+    {
+        Canvas canvas = FindMainSceneCanvas();
+        if (canvas == null) return;
+
+        // Вспомогательный метод для безопасного создания UI-объектов
+        System.Func<string, Transform, GameObject> createUI = (name, parent) =>
+        {
+            GameObject obj = new GameObject(name);
+            RectTransform rt = obj.AddComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            return obj;
+        };
+
+        rulesPanelObj = createUI("RulesPanel", canvas.transform);
+        rulesPanelObj.transform.SetAsLastSibling();
+
+        RectTransform panelRt = rulesPanelObj.GetComponent<RectTransform>();
+        panelRt.sizeDelta = new Vector2(700f, 500f);
+        panelRt.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRt.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRt.pivot = new Vector2(0.5f, 0.5f);
+        panelRt.anchoredPosition = Vector2.zero;
+
+        Image bg = rulesPanelObj.AddComponent<Image>();
+        bg.color = new Color(0.05f, 0.05f, 0.05f, 0.98f);
+
+        Outline outline = rulesPanelObj.AddComponent<Outline>();
+        outline.effectColor = new Color(0.8f, 0.35f, 0.1f, 1f);
+        outline.effectDistance = new Vector2(4f, -4f);
+
+        TMP_FontAsset activeFont = null;
+        TextMeshProUGUI[] allTexts = FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include);
+        foreach (var txt in allTexts)
+        {
+            if (txt != null && txt.font != null) { activeFont = txt.font; break; }
+        }
+
+        // Заголовок
+        GameObject titleObj = createUI("TitleText", rulesPanelObj.transform);
+        TextMeshProUGUI titleTxt = titleObj.AddComponent<TextMeshProUGUI>();
+        titleTxt.text = "ИНСТРУКЦИЯ И ПРАВИЛА ИНСПЕКТОРА";
+        titleTxt.fontSize = 22;
+        titleTxt.fontStyle = FontStyles.Bold;
+        titleTxt.color = new Color(0.9f, 0.4f, 0.1f);
+        titleTxt.alignment = TextAlignmentOptions.Center;
+        if (activeFont != null) titleTxt.font = activeFont;
+        
+        RectTransform titleRt = titleObj.GetComponent<RectTransform>();
+        titleRt.anchorMin = new Vector2(0f, 0.85f);
+        titleRt.anchorMax = new Vector2(1f, 0.95f);
+        titleRt.offsetMin = new Vector2(20f, 0f);
+        titleRt.offsetMax = new Vector2(-20f, 0f);
+
+        // Текст содержания
+        GameObject contentObj = createUI("ContentText", rulesPanelObj.transform);
+        rulesContentText = contentObj.AddComponent<TextMeshProUGUI>();
+        rulesContentText.fontSize = 18;
+        rulesContentText.color = Color.white;
+        rulesContentText.alignment = TextAlignmentOptions.TopLeft;
+        rulesContentText.enableWordWrapping = true;
+        if (activeFont != null) rulesContentText.font = activeFont;
+
+        RectTransform contentRt = contentObj.GetComponent<RectTransform>();
+        contentRt.anchorMin = new Vector2(0.05f, 0.2f);
+        contentRt.anchorMax = new Vector2(0.95f, 0.8f);
+        contentRt.offsetMin = Vector2.zero;
+        contentRt.offsetMax = Vector2.zero;
+
+        // Лейбл страниц
+        GameObject pageLabelObj = createUI("PageLabel", rulesPanelObj.transform);
+        rulesPageLabel = pageLabelObj.AddComponent<TextMeshProUGUI>();
+        rulesPageLabel.fontSize = 16;
+        rulesPageLabel.color = Color.gray;
+        rulesPageLabel.alignment = TextAlignmentOptions.Center;
+        if (activeFont != null) rulesPageLabel.font = activeFont;
+
+        RectTransform pageLabelRt = pageLabelObj.GetComponent<RectTransform>();
+        pageLabelRt.anchorMin = new Vector2(0.4f, 0.05f);
+        pageLabelRt.anchorMax = new Vector2(0.6f, 0.12f);
+        pageLabelRt.offsetMin = Vector2.zero;
+        pageLabelRt.offsetMax = Vector2.zero;
+
+        // Вспомогательный метод для кнопок
+        System.Action<string, Vector2, Vector2, string, System.Action> setupButton = (btnName, size, pos, btnText, action) =>
+        {
+            GameObject btnObj = createUI(btnName, rulesPanelObj.transform);
+            RectTransform rt = btnObj.GetComponent<RectTransform>();
+            rt.sizeDelta = size;
+            rt.anchorMin = new Vector2(0.5f, 0.05f);
+            rt.anchorMax = new Vector2(0.5f, 0.05f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = pos;
+
+            Image btnImg = btnObj.AddComponent<Image>();
+            btnImg.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+            Outline btnOutline = btnObj.AddComponent<Outline>();
+            btnOutline.effectColor = Color.white;
+            btnOutline.effectDistance = new Vector2(1f, -1f);
+
+            Button btn = btnObj.AddComponent<Button>();
+            btn.onClick.AddListener(() => action());
+
+            GameObject txtObj = createUI("Text", btnObj.transform);
+            TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
+            tmp.text = btnText;
+            tmp.fontSize = 14;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.color = Color.white;
+            tmp.alignment = TextAlignmentOptions.Center;
+            if (activeFont != null) tmp.font = activeFont;
+
+            RectTransform txtRt = txtObj.GetComponent<RectTransform>();
+            txtRt.anchorMin = Vector2.zero;
+            txtRt.anchorMax = Vector2.one;
+            txtRt.offsetMin = Vector2.zero;
+            txtRt.offsetMax = Vector2.zero;
+
+            btnObj.AddComponent<MenuButtonHoverEffects>();
+
+            if (btnName == "PrevBtn") rulesPrevBtn = btn;
+            else if (btnName == "NextBtn") rulesNextBtn = btn;
+        };
+
+        setupButton("PrevBtn", new Vector2(100f, 35f), new Vector2(-150f, 15f), "НАЗАД", () => {
+            if (rulesCurrentPage > 0) {
+                rulesCurrentPage--;
+                UpdateRulesPageContent();
+            }
+        });
+
+        setupButton("NextBtn", new Vector2(100f, 35f), new Vector2(150f, 15f), "ДАЛЕЕ", () => {
+            if (rulesCurrentPage < 2) {
+                rulesCurrentPage++;
+                UpdateRulesPageContent();
+            }
+        });
+
+        setupButton("CloseBtn", new Vector2(120f, 35f), new Vector2(0f, 15f), "ЗАКРЫТЬ", HideRulesPanel);
+    }
+
+    private void CreateRulesButtonRuntime()
+    {
+        if (GameObject.Find("RulesButton") != null)
+        {
+            rulesButtonObj = GameObject.Find("RulesButton");
+            return;
+        }
+
+        GameObject pauseBtnObj = GameObject.Find("PauseBtn");
+        if (pauseBtnObj == null) pauseBtnObj = GameObject.Find("PauseButton");
+        if (pauseBtnObj == null) return;
+
+        GameObject rulesBtnObj = Instantiate(pauseBtnObj, pauseBtnObj.transform.parent);
+        rulesBtnObj.name = "RulesButton";
+        rulesButtonObj = rulesBtnObj;
+
+        RectTransform pauseRt = pauseBtnObj.GetComponent<RectTransform>();
+        RectTransform rulesRt = rulesBtnObj.GetComponent<RectTransform>();
+
+        // Настраиваем размер кнопки правил, делая её компактнее
+        rulesRt.sizeDelta = new Vector2(130f, 45f);
+
+        // Сдвигаем влево относительно паузы и выравниваем по центру Y
+        rulesRt.anchoredPosition = pauseRt.anchoredPosition + new Vector2(-270f, -17.5f);
+
+        // Настраиваем текст на кнопке
+        TextMeshProUGUI txt = rulesBtnObj.GetComponentInChildren<TextMeshProUGUI>();
+        if (txt != null)
+        {
+            txt.text = "ПРАВИЛА";
+            txt.fontSize = 14f;
+        }
+
+        Button btn = rulesBtnObj.GetComponent<Button>();
+        if (btn != null)
+        {
+            btn.onClick = new Button.ButtonClickedEvent();
+            btn.onClick.AddListener(ShowRulesPanel);
+        }
+    }
+
+    private AudioClip CreateVictoryFanfare()
+    {
+        int samplerate = 44100;
+        
+        // Мажорный праздничный фанфарный арпеджио на 4 секунды
+        float[] freqs = new float[] { 
+            523.25f, 659.25f, 783.99f, 1046.50f, 1318.51f, 1567.98f, 1318.51f, 1046.50f, 
+            698.46f, 880.00f, 1046.50f, 1396.91f, 1760.00f, 1396.91f, 1046.50f, 1567.98f 
+        };
+        
+        float[] durs = new float[] { 
+            0.15f, 0.15f, 0.15f, 0.25f, 0.15f, 0.15f, 0.15f, 0.25f,
+            0.15f, 0.15f, 0.15f, 0.25f, 0.15f, 0.15f, 0.15f, 0.50f
+        };
+        
+        float length = 0f;
+        foreach (float d in durs) length += d;
+        
+        int totalSamples = (int)(samplerate * length);
+        float[] samples = new float[totalSamples];
+        
+        int sampleIdx = 0;
+        for (int note = 0; note < freqs.Length; note++)
+        {
+            float freq = freqs[note];
+            float duration = durs[note];
+            int noteSamples = (int)(samplerate * duration);
+            
+            for (int s = 0; s < noteSamples && sampleIdx < totalSamples; s++)
+            {
+                float t = (float)s / samplerate;
+                
+                // Смесь синусоиды и меандра для теплого ретро-звука (8-бит чиптюн)
+                float sine = Mathf.Sin(2 * Mathf.PI * freq * t);
+                float square = Mathf.Sign(sine);
+                float val = (sine * 0.7f + square * 0.3f);
+                
+                // Плавное затухание в конце ноты (Envelope)
+                float decay = 1f - ((float)s / noteSamples);
+                samples[sampleIdx++] = val * decay * 0.18f;
+            }
+        }
+        
+        AudioClip clip = AudioClip.Create("Victory_Fanfare", totalSamples, 1, samplerate, false);
+        clip.SetData(samples, 0);
+        return clip;
+    }
+
+    private IEnumerator ShakeTransform(RectTransform rt, float duration, float magnitude)
+    {
+        Vector3 startPos = rt.anchoredPosition3D;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            rt.anchoredPosition3D = startPos + new Vector3(Random.Range(-magnitude, magnitude), Random.Range(-magnitude, magnitude), 0);
+            yield return null;
+        }
+        rt.anchoredPosition3D = startPos;
+    }
+
+    private IEnumerator BinaryConfettiRoutine(Canvas canvas, float duration)
+    {
+        float elapsed = 0f;
+        System.Collections.Generic.List<RectTransform> activeConfetti = new System.Collections.Generic.List<RectTransform>();
+        float spawnTimer = 0f;
+
+        RectTransform canvasRt = canvas.GetComponent<RectTransform>();
+        float canvasWidth = canvasRt != null ? canvasRt.rect.width : 1920f;
+        float canvasHeight = canvasRt != null ? canvasRt.rect.height : 1080f;
+
+        while (elapsed < duration)
+        {
+            float dt = Time.unscaledDeltaTime;
+            elapsed += dt;
+            spawnTimer += dt;
+
+            if (spawnTimer >= 0.04f)
+            {
+                spawnTimer = 0f;
+                GameObject conf = new GameObject("MatrixConfetti");
+                conf.transform.SetParent(canvas.transform, false);
+
+                TextMeshProUGUI tmp = conf.AddComponent<TextMeshProUGUI>();
+                tmp.text = Random.value > 0.5f ? "0" : "1";
+                tmp.fontSize = Random.Range(18, 30);
+                tmp.color = new Color(0f, Random.Range(0.6f, 1f), 0f, Random.Range(0.6f, 0.95f));
+                tmp.fontStyle = FontStyles.Bold;
+
+                if (directiveTextDisplay != null) tmp.font = directiveTextDisplay.font;
+
+                RectTransform rt = conf.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0.5f, 1f);
+                rt.anchorMax = new Vector2(0.5f, 1f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+
+                float rx = Random.Range(-canvasWidth / 2f, canvasWidth / 2f);
+                rt.anchoredPosition = new Vector2(rx, 30f);
+
+                activeConfetti.Add(rt);
+            }
+
+            float speed = 400f;
+            for (int i = activeConfetti.Count - 1; i >= 0; i--)
+            {
+                RectTransform rt = activeConfetti[i];
+                if (rt == null)
+                {
+                    activeConfetti.RemoveAt(i);
+                    continue;
+                }
+
+                rt.anchoredPosition += new Vector2(0f, -speed * dt);
+                if (rt.anchoredPosition.y < -canvasHeight - 50f)
+                {
+                    activeConfetti.RemoveAt(i);
+                    Destroy(rt.gameObject);
+                }
+            }
+
+            yield return null;
+        }
+
+        foreach (var rt in activeConfetti)
+        {
+            if (rt != null) Destroy(rt.gameObject);
+        }
+    }
+
+    private IEnumerator FinalVictorySequence(GameObject panelObj)
+    {
+        // 1. Находим Clipboard и выключаем его на время анимации
+        Transform clipboard = panelObj.transform.Find("Clipboard");
+        if (clipboard != null) clipboard.gameObject.SetActive(false);
+
+        // 2. Создаем терминальный контейнер
+        GameObject terminalContainer = new GameObject("TerminalContainer");
+        terminalContainer.transform.SetParent(panelObj.transform, false);
+        
+        RectTransform terminalRt = terminalContainer.AddComponent<RectTransform>();
+        terminalRt.anchorMin = Vector2.zero;
+        terminalRt.anchorMax = Vector2.one;
+        terminalRt.sizeDelta = Vector2.zero;
+
+        // Создаем фон терминала
+        GameObject termBg = new GameObject("TerminalBg");
+        termBg.transform.SetParent(terminalContainer.transform, false);
+        Image bgImg = termBg.AddComponent<Image>();
+        bgImg.color = new Color(0.01f, 0.03f, 0.01f, 0.98f); // Глубокий темно-зеленый терминал
+        RectTransform bgRt = termBg.GetComponent<RectTransform>();
+        bgRt.anchorMin = Vector2.zero;
+        bgRt.anchorMax = Vector2.one;
+        bgRt.sizeDelta = Vector2.zero;
+
+        // Зеленая обводка экрана
+        UnityEngine.UI.Outline outline = termBg.AddComponent<UnityEngine.UI.Outline>();
+        outline.effectColor = new Color(0f, 0.8f, 0f, 0.5f);
+        outline.effectDistance = new Vector2(4f, -4f);
+
+        // Текст терминала
+        GameObject termTextObj = new GameObject("TerminalText");
+        termTextObj.transform.SetParent(terminalContainer.transform, false);
+        RectTransform txtRt = termTextObj.AddComponent<RectTransform>();
+        txtRt.anchorMin = new Vector2(0.1f, 0.15f);
+        txtRt.anchorMax = new Vector2(0.9f, 0.85f);
+        txtRt.offsetMin = Vector2.zero;
+        txtRt.offsetMax = Vector2.zero;
+
+        TextMeshProUGUI terminalText = termTextObj.AddComponent<TextMeshProUGUI>();
+        terminalText.fontSize = 28f;
+        terminalText.color = new Color(0f, 1f, 0f, 1f); // Яркий зеленый
+        terminalText.alignment = TextAlignmentOptions.TopLeft;
+        terminalText.fontStyle = FontStyles.Bold;
+        terminalText.enableWordWrapping = true;
+
+        if (directiveTextDisplay != null) terminalText.font = directiveTextDisplay.font;
+
+        // Формируем текст
+        string titleStr = currentShift != null ? currentShift.shiftName.ToUpper() : "СМЕНА 7";
+        string fullText = 
+            $"\n" +
+            $"[СИСТЕМНЫЙ СИГНАЛ: {titleStr} ЗАВЕРШЕНА]\n" +
+            $"[ИНСПЕКТОР, СВЯЗЬ УСТАНОВЛЕНА...]\n\n" +
+            $"АНАЛИЗ БЕЗОПАСНОСТИ СЕКТОРА:\n" +
+            $"------------------------------------------------\n" +
+            $"- Штрафы / Ошибки: {strikes} / 3\n" +
+            $"- Граждане сектора: Безопасность подтверждена\n" +
+            $"- Угрозы проникновения: Нейтрализованы\n" +
+            $"------------------------------------------------\n\n" +
+            $"ПОЗДРАВЛЯЕМ, ИНСПЕКТОР!\n" +
+            $"Вы успешно защитили наш блокпост и жильцов.\n" +
+            $"Ни один монстр не прошел.\n\n" +
+            $"ЗВАНИЕ: ЖЕЛЕЗНЫЙ ЩИТ РОДИНЫ\n" +
+            $"СТАТУС: ПОЧЕТНАЯ ОТСТАВКА\n\n" +
+            $"[КОНЕЦ ПЕРЕДАЧИ]";
+
+        // Печатаем посимвольно (быстрая печать)
+        terminalText.text = "";
+        float charDelay = 0.008f;
+        int charCount = 0;
+        foreach (char c in fullText)
+        {
+            terminalText.text += c;
+            if (c != ' ' && c != '\n')
+            {
+                charCount++;
+                if (charCount % 2 == 0)
+                {
+                    if (sfxAudioSource != null && phonePickupSound != null)
+                    {
+                        sfxAudioSource.PlayOneShot(phonePickupSound, 0.025f); 
+                    }
+                }
+            }
+            yield return new WaitForSecondsRealtime(charDelay);
+        }
+
+        yield return new WaitForSecondsRealtime(0.5f);
+
+        // СТЕМПИНГ: Спавним МНОГО неоновых штампов "ОДОБРЕНО" по всему экрану терминала!
+        int finalStampsCount = Random.Range(35, 46); // Увеличено до 35-45 штампов
+        for (int i = 0; i < finalStampsCount; i++)
+        {
+            GameObject stampObj = new GameObject("FinalVictoryStamp_" + i);
+            stampObj.transform.SetParent(terminalContainer.transform, false);
+            
+            RectTransform stampRt = stampObj.AddComponent<RectTransform>();
+            stampRt.anchorMin = new Vector2(0.5f, 0.5f);
+            stampRt.anchorMax = new Vector2(0.5f, 0.5f);
+            stampRt.pivot = new Vector2(0.5f, 0.5f);
+            
+            // Разбрасываем по всему терминалу
+            float rx = Random.Range(-550f, 550f);
+            float ry = Random.Range(-400f, 400f);
+            stampRt.anchoredPosition = new Vector2(rx, ry);
+            
+            // Случайный размер и наклон
+            float randW = Random.Range(300f, 420f);
+            float randH = randW * 0.375f;
+            stampRt.sizeDelta = new Vector2(randW, randH);
+            stampRt.localEulerAngles = new Vector3(0f, 0f, Random.Range(-35f, 35f));
+            
+            Image stampImg = stampObj.AddComponent<Image>();
+            stampImg.color = new Color(0f, Random.Range(0.8f, 1f), 0f, Random.Range(0.7f, 0.95f));
+            
+            if (stampApprovedRu != null)
+            {
+                stampImg.sprite = stampApprovedRu;
+                stampImg.preserveAspect = true;
+            }
+            
+            // Звук удара
+            if (sfxAudioSource != null && shutterCloseSound != null)
+            {
+                sfxAudioSource.PlayOneShot(shutterCloseSound, 0.85f);
+            }
+            
+            // Анимация быстрого "удара" штампа
+            float stampDuration = 0.08f;
+            float stampElapsed = 0f;
+            Vector3 startScale = Vector3.one * 4f;
+            Vector3 targetScale = Vector3.one;
+            
+            while (stampElapsed < stampDuration)
+            {
+                stampElapsed += Time.unscaledDeltaTime;
+                float t = stampElapsed / stampDuration;
+                stampRt.localScale = Vector3.Lerp(startScale, targetScale, t);
+                yield return null;
+            }
+            stampRt.localScale = targetScale;
+            
+            yield return new WaitForSecondsRealtime(Random.Range(0.06f, 0.12f));
+        }
+
+        // Тряска экрана
+        Canvas canvas = panelObj.GetComponentInParent<Canvas>();
+        if (canvas != null)
+        {
+            RectTransform canvasRt = canvas.GetComponent<RectTransform>();
+            if (canvasRt != null)
+            {
+                yield return StartCoroutine(ShakeTransform(canvasRt, 0.25f, 15f));
+            }
+        }
+
+        // Запуск бинарного конфетти (дождя матричного)
+        Canvas termCanvas = terminalContainer.GetComponentInParent<Canvas>();
+        if (termCanvas != null)
+        {
+            StartCoroutine(BinaryConfettiRoutine(termCanvas, 4.5f));
+        }
+
+        yield return new WaitForSecondsRealtime(4.5f);
+
+        // 3. Плавно скрываем терминал и показываем бумажный планшет Victory
+        float fadeDuration = 0.8f;
+        float fadeElapsed = 0f;
+        
+        CanvasGroup cg = terminalContainer.AddComponent<CanvasGroup>();
+        while (fadeElapsed < fadeDuration)
+        {
+            fadeElapsed += Time.unscaledDeltaTime;
+            cg.alpha = 1f - (fadeElapsed / fadeDuration);
+            yield return null;
+        }
+
+        Destroy(terminalContainer);
+
+        // Включаем Clipboard обратно
+        if (clipboard != null)
+        {
+            clipboard.gameObject.SetActive(true);
+            CanvasGroup clipCg = clipboard.gameObject.GetComponent<CanvasGroup>();
+            if (clipCg == null) clipCg = clipboard.gameObject.AddComponent<CanvasGroup>();
+            clipCg.alpha = 0f;
+
+            float showDuration = 0.5f;
+            float showElapsed = 0f;
+            while (showElapsed < showDuration)
+            {
+                showElapsed += Time.unscaledDeltaTime;
+                clipCg.alpha = showElapsed / showDuration;
+                yield return null;
+            }
+            clipCg.alpha = 1f;
+        }
+    }
+
+    private IEnumerator SpawnMultipleVictoryStamps(GameObject panelObj)
+    {
+        yield return new WaitForSeconds(0.35f);
+
+        Transform clipboard = panelObj.transform.Find("Clipboard");
+        Transform stampParent = (clipboard != null) ? clipboard : panelObj.transform;
+
+        foreach (Transform child in stampParent.GetComponentsInChildren<Transform>(true))
+        {
+            if (child != null && child.name.StartsWith("MultiVictoryStamp"))
+            {
+                Object.Destroy(child.gameObject);
+            }
+        }
+
+        int stampCount = Random.Range(6, 9);
+        for (int i = 0; i < stampCount; i++)
+        {
+            GameObject stampObj = new GameObject("MultiVictoryStamp_" + i);
+            stampObj.transform.SetParent(stampParent, false);
+
+            RectTransform stampRt = stampObj.AddComponent<RectTransform>();
+            stampRt.anchorMin = new Vector2(0.5f, 0.5f);
+            stampRt.anchorMax = new Vector2(0.5f, 0.5f);
+            stampRt.pivot = new Vector2(0.5f, 0.5f);
+
+            float randX = Random.Range(-180f, 180f);
+            float randY = Random.Range(-210f, 210f);
+            stampRt.anchoredPosition = new Vector2(randX, randY);
+
+            float randSizeWidth = Random.Range(180f, 220f);
+            float randSizeHeight = randSizeWidth * 0.375f;
+            stampRt.sizeDelta = new Vector2(randSizeWidth, randSizeHeight);
+            stampRt.localEulerAngles = new Vector3(0f, 0f, Random.Range(-28f, 28f));
+
+            Image stampImg = stampObj.AddComponent<Image>();
+            stampImg.color = new Color(Random.Range(0f, 0.15f), Random.Range(0.7f, 1f), Random.Range(0.1f, 0.3f), Random.Range(0.75f, 0.95f));
+
+            if (stampApprovedRu != null)
+            {
+                stampImg.sprite = stampApprovedRu;
+                stampImg.preserveAspect = true;
+            }
+
+            if (sfxAudioSource != null && shutterCloseSound != null)
+            {
+                sfxAudioSource.PlayOneShot(shutterCloseSound, 0.75f);
+            }
+
+            float stampDuration = 0.08f;
+            float stampElapsed = 0f;
+            Vector3 startScale = Vector3.one * 3.5f;
+            Vector3 targetScale = Vector3.one;
+
+            while (stampElapsed < stampDuration)
+            {
+                stampElapsed += Time.unscaledDeltaTime;
+                float t = stampElapsed / stampDuration;
+                stampRt.localScale = Vector3.Lerp(startScale, targetScale, t);
+                yield return null;
+            }
+            stampRt.localScale = targetScale;
+
+            yield return new WaitForSecondsRealtime(Random.Range(0.06f, 0.12f));
+        }
+    }
+
+    private void CreatePauseTapePlayerButton()
+    {
+        if (pausePanel == null) return;
+        if (pausePanel.transform.Find("TapePlayerButton") != null) return;
+
+        // Ищем кнопку выхода или настроек для шаблона стиля и положения
+        Transform exitRt = pausePanel.transform.Find("ExitBtn");
+        if (exitRt == null) exitRt = pausePanel.transform.Find("ExitMenuBtn");
+        if (exitRt == null) exitRt = pausePanel.transform.Find("ExitButton");
+        
+        // Если не нашли кнопку выхода, берем любую кнопку как шаблон
+        Button templateBtn = pausePanel.GetComponentInChildren<Button>(true);
+        if (templateBtn == null) return;
+
+        // Клонируем кнопку выхода (или шаблон)
+        GameObject tapeBtnObj = Instantiate(templateBtn.gameObject, pausePanel.transform);
+        tapeBtnObj.name = "TapePlayerButton";
+
+        RectTransform tapeRt = tapeBtnObj.GetComponent<RectTransform>();
+        
+        // Если нашли кнопку выхода, позиционируем красивой стопкой
+        if (exitRt != null)
+        {
+            RectTransform exitRect = exitRt.GetComponent<RectTransform>();
+            Vector3 originalExitPos = exitRect.anchoredPosition3D;
+            
+            // Сдвигаем кнопку Выхода на 80 единиц вниз
+            exitRect.anchoredPosition3D = originalExitPos + new Vector3(0, -80f, 0);
+            
+            // Нашу кнопку магнитофона ставим на старое место кнопки Выхода
+            tapeRt.anchoredPosition3D = originalExitPos;
+            
+            // Убеждаемся в правильном порядке рендеринга (Sibling Index)
+            tapeBtnObj.transform.SetSiblingIndex(exitRt.GetSiblingIndex());
+        }
+
+        // Меняем текст кнопки
+        TextMeshProUGUI txt = tapeBtnObj.GetComponentInChildren<TextMeshProUGUI>(true);
+        if (txt != null)
+        {
+            txt.text = "МАГНИТОФОН";
+            txt.fontSize = 18f;
+        }
+
+        Button btn = tapeBtnObj.GetComponent<Button>();
+        if (btn != null)
+        {
+            btn.onClick = new Button.ButtonClickedEvent();
+            btn.onClick.AddListener(ShowPauseTapePlayerPanel);
+        }
+
+        tapeBtnObj.SetActive(true);
+    }
+
+    public void ShowPauseTapePlayerPanel()
+    {
+        if (sfxAudioSource != null && phonePickupSound != null) sfxAudioSource.PlayOneShot(phonePickupSound, 0.4f);
+
+        if (pauseTapePlayerPanel != null)
+        {
+            Destroy(pauseTapePlayerPanel);
+        }
+
+        Canvas canvas = FindMainSceneCanvas();
+        if (canvas == null) return;
+
+        pauseTapePlayerPanel = new GameObject("RuntimeTapePlayerPanel");
+        pauseTapePlayerPanel.transform.SetParent(canvas.transform, false);
+        pauseTapePlayerPanel.transform.SetAsLastSibling();
+
+        RectTransform panelRt = pauseTapePlayerPanel.AddComponent<RectTransform>();
+        panelRt.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRt.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRt.pivot = new Vector2(0.5f, 0.5f);
+        panelRt.sizeDelta = new Vector2(500f, 520f);
+        panelRt.anchoredPosition = Vector2.zero;
+
+        Image panelBg = pauseTapePlayerPanel.AddComponent<Image>();
+        panelBg.color = new Color(0.08f, 0.08f, 0.08f, 0.98f);
+
+        Outline panelOutline = pauseTapePlayerPanel.AddComponent<Outline>();
+        panelOutline.effectColor = new Color(0.4f, 0.4f, 0.4f, 0.8f);
+        panelOutline.effectDistance = new Vector2(3f, -3f);
+
+        TMP_FontAsset activeFont = null;
+        TextMeshProUGUI[] allTexts = Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include);
+        foreach (var txt in allTexts)
+        {
+            if (txt != null && txt.font != null) { activeFont = txt.font; break; }
+        }
+
+        // 1. Заголовок
+        GameObject titleObj = new GameObject("Title");
+        titleObj.transform.SetParent(pauseTapePlayerPanel.transform, false);
+        TextMeshProUGUI title = titleObj.AddComponent<TextMeshProUGUI>();
+        title.text = "РЕГЕНЕРАТОР ЗВУКОВОГО ЭФИРА";
+        title.fontSize = 22;
+        title.fontStyle = FontStyles.Bold;
+        title.color = new Color(0.8f, 0.8f, 0.8f, 0.9f);
+        title.alignment = TextAlignmentOptions.Center;
+        if (activeFont != null) title.font = activeFont;
+
+        RectTransform titleRt = titleObj.GetComponent<RectTransform>();
+        titleRt.anchorMin = new Vector2(0, 0.88f); titleRt.anchorMax = new Vector2(1, 0.98f);
+        titleRt.offsetMin = Vector2.zero; titleRt.offsetMax = Vector2.zero;
+
+        // Находим или создаем постоянный GameObject для воспроизведения аудио в фоне
+        Transform persistentTpTrans = transform.Find("PersistentTapePlayer");
+        GameObject persistentTpObj;
+        if (persistentTpTrans == null)
+        {
+            persistentTpObj = new GameObject("PersistentTapePlayer");
+            persistentTpObj.transform.SetParent(transform, false);
+        }
+        else
+        {
+            persistentTpObj = persistentTpTrans.gameObject;
+        }
+        TapePlayer tp = persistentTpObj.GetComponent<TapePlayer>();
+        if (tp == null)
+        {
+            tp = persistentTpObj.AddComponent<TapePlayer>();
+        }
+
+        // 2. Левая катушка
+        tp.spoolLeft = CreatePauseVisualSpool(pauseTapePlayerPanel, "SpoolLeft", new Vector2(-120f, 50f));
+
+        // 3. Правая катушка
+        tp.spoolRight = CreatePauseVisualSpool(pauseTapePlayerPanel, "SpoolRight", new Vector2(120f, 50f));
+
+        // 4. Дисплей частоты / канала
+        GameObject displayObj = new GameObject("Display");
+        displayObj.transform.SetParent(pauseTapePlayerPanel.transform, false);
+        
+        Image displayBg = displayObj.AddComponent<Image>();
+        displayBg.color = new Color(0.02f, 0.05f, 0.02f, 0.95f); // ЖК дисплей
+        
+        Outline displayOutline = displayObj.AddComponent<Outline>();
+        displayOutline.effectColor = new Color(0f, 0.6f, 0f, 0.5f);
+        displayOutline.effectDistance = new Vector2(2f, -2f);
+
+        RectTransform displayRt = displayObj.GetComponent<RectTransform>();
+        displayRt.sizeDelta = new Vector2(340f, 65f);
+        displayRt.anchorMin = new Vector2(0.5f, 0.5f);
+        displayRt.anchorMax = new Vector2(0.5f, 0.5f);
+        displayRt.anchoredPosition = new Vector2(0f, -70f);
+
+        GameObject dispTxtObj = new GameObject("Text");
+        dispTxtObj.transform.SetParent(displayObj.transform, false);
+        TextMeshProUGUI dispTxt = dispTxtObj.AddComponent<TextMeshProUGUI>();
+        dispTxt.text = "МАГНИТОФОН ВЫКЛЮЧЕН";
+        dispTxt.color = new Color(0f, 0.9f, 0f, 1f); // Зеленый текст
+        dispTxt.fontSize = 18;
+        dispTxt.fontStyle = FontStyles.Bold;
+        dispTxt.alignment = TextAlignmentOptions.Center;
+        if (activeFont != null) dispTxt.font = activeFont;
+
+        RectTransform dispTxtRt = dispTxtObj.GetComponent<RectTransform>();
+        dispTxtRt.anchorMin = Vector2.zero; dispTxtRt.anchorMax = Vector2.one;
+        dispTxtRt.offsetMin = Vector2.zero; dispTxtRt.offsetMax = Vector2.zero;
+
+        tp.channelTextDisplay = dispTxt;
+
+        // 5. Светодиодный индикатор
+        GameObject ledObj = new GameObject("LedIndicator");
+        ledObj.transform.SetParent(pauseTapePlayerPanel.transform, false);
+        
+        Image ledImg = ledObj.AddComponent<Image>();
+        ledImg.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+        
+        RectTransform ledRt = ledObj.GetComponent<RectTransform>();
+        ledRt.sizeDelta = new Vector2(20f, 20f);
+        ledRt.anchorMin = new Vector2(0.5f, 0.5f);
+        ledRt.anchorMax = new Vector2(0.5f, 0.5f);
+        ledRt.anchoredPosition = new Vector2(-190f, -70f);
+
+        tp.ledIndicator = ledImg;
+
+        // 6. Кнопка ВКЛ / ВЫКЛ
+        GameObject playBtnObj = new GameObject("PlayBtn");
+        playBtnObj.transform.SetParent(pauseTapePlayerPanel.transform, false);
+
+        Image playBtnImg = playBtnObj.AddComponent<Image>();
+        playBtnImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+
+        Outline playBtnOutline = playBtnObj.AddComponent<Outline>();
+        playBtnOutline.effectColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+        playBtnOutline.effectDistance = new Vector2(2f, -2f);
+
+        Button playBtn = playBtnObj.AddComponent<Button>();
+        playBtn.onClick.AddListener(tp.TogglePlay);
+
+        RectTransform playBtnRt = playBtnObj.GetComponent<RectTransform>();
+        playBtnRt.sizeDelta = new Vector2(160f, 50f);
+        playBtnRt.anchorMin = new Vector2(0.5f, 0.5f);
+        playBtnRt.anchorMax = new Vector2(0.5f, 0.5f);
+        playBtnRt.anchoredPosition = new Vector2(-95f, -145f);
+
+        GameObject playBtnTxtObj = new GameObject("Text");
+        playBtnTxtObj.transform.SetParent(playBtnObj.transform, false);
+        TextMeshProUGUI playBtnTxt = playBtnTxtObj.AddComponent<TextMeshProUGUI>();
+        playBtnTxt.text = "СТАРТ / СТОП";
+        playBtnTxt.color = Color.white;
+        playBtnTxt.fontSize = 16;
+        playBtnTxt.fontStyle = FontStyles.Bold;
+        playBtnTxt.alignment = TextAlignmentOptions.Center;
+        if (activeFont != null) playBtnTxt.font = activeFont;
+
+        RectTransform playBtnTxtRt = playBtnTxtObj.GetComponent<RectTransform>();
+        playBtnTxtRt.anchorMin = Vector2.zero; playBtnTxtRt.anchorMax = Vector2.one;
+        playBtnTxtRt.offsetMin = Vector2.zero; playBtnTxtRt.offsetMax = Vector2.zero;
+
+        // 7. Кнопка СЛЕДУЮЩИЙ КАНАЛ
+        GameObject channelBtnObj = new GameObject("ChannelBtn");
+        channelBtnObj.transform.SetParent(pauseTapePlayerPanel.transform, false);
+        
+        Image channelBtnImg = channelBtnObj.AddComponent<Image>();
+        channelBtnImg.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+        
+        Outline channelBtnOutline = channelBtnObj.AddComponent<Outline>();
+        channelBtnOutline.effectColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+        channelBtnOutline.effectDistance = new Vector2(2f, -2f);
+
+        Button channelBtn = channelBtnObj.AddComponent<Button>();
+        channelBtn.onClick.AddListener(tp.NextChannel);
+
+        RectTransform channelBtnRt = channelBtnObj.GetComponent<RectTransform>();
+        channelBtnRt.sizeDelta = new Vector2(160f, 50f);
+        channelBtnRt.anchorMin = new Vector2(0.5f, 0.5f);
+        channelBtnRt.anchorMax = new Vector2(0.5f, 0.5f);
+        channelBtnRt.anchoredPosition = new Vector2(95f, -145f);
+
+        GameObject channelBtnTxtObj = new GameObject("Text");
+        channelBtnTxtObj.transform.SetParent(channelBtnObj.transform, false);
+        TextMeshProUGUI channelBtnTxt = channelBtnTxtObj.AddComponent<TextMeshProUGUI>();
+        channelBtnTxt.text = "СЛЕД. ЭФИР";
+        channelBtnTxt.color = Color.white;
+        channelBtnTxt.fontSize = 16;
+        channelBtnTxt.fontStyle = FontStyles.Bold;
+        channelBtnTxt.alignment = TextAlignmentOptions.Center;
+        if (activeFont != null) channelBtnTxt.font = activeFont;
+
+        RectTransform channelBtnTxtRt = channelBtnTxtObj.GetComponent<RectTransform>();
+        channelBtnTxtRt.anchorMin = Vector2.zero; channelBtnTxtRt.anchorMax = Vector2.one;
+        channelBtnTxtRt.offsetMin = Vector2.zero; channelBtnTxtRt.offsetMax = Vector2.zero;
+
+        // 8. Кнопка ЗАКРЫТЬ
+        GameObject closeBtnObj = new GameObject("CloseBtn");
+        closeBtnObj.transform.SetParent(pauseTapePlayerPanel.transform, false);
+        
+        Image closeBtnImg = closeBtnObj.AddComponent<Image>();
+        closeBtnImg.color = new Color(0.5f, 0.15f, 0.15f, 1f); // Красная кнопка назад
+
+        Outline closeBtnOutline = closeBtnObj.AddComponent<Outline>();
+        closeBtnOutline.effectColor = new Color(0.7f, 0.2f, 0.2f, 1f);
+        closeBtnOutline.effectDistance = new Vector2(2f, -2f);
+
+        Button closeBtn = closeBtnObj.AddComponent<Button>();
+        closeBtn.onClick.AddListener(HidePauseTapePlayerPanel);
+
+        RectTransform closeBtnRt = closeBtnObj.GetComponent<RectTransform>();
+        closeBtnRt.sizeDelta = new Vector2(350f, 50f);
+        closeBtnRt.anchorMin = new Vector2(0.5f, 0.5f);
+        closeBtnRt.anchorMax = new Vector2(0.5f, 0.5f);
+        closeBtnRt.anchoredPosition = new Vector2(0f, -215f);
+
+        GameObject closeBtnTxtObj = new GameObject("Text");
+        closeBtnTxtObj.transform.SetParent(closeBtnObj.transform, false);
+        TextMeshProUGUI closeBtnTxt = closeBtnTxtObj.AddComponent<TextMeshProUGUI>();
+        closeBtnTxt.text = "НАЗАД В МЕНЮ ПАУЗЫ";
+        closeBtnTxt.color = Color.white;
+        closeBtnTxt.fontSize = 16;
+        closeBtnTxt.fontStyle = FontStyles.Bold;
+        closeBtnTxt.alignment = TextAlignmentOptions.Center;
+        if (activeFont != null) closeBtnTxt.font = activeFont;
+
+        RectTransform closeBtnTxtRt = closeBtnTxtObj.GetComponent<RectTransform>();
+        closeBtnTxtRt.anchorMin = Vector2.zero; closeBtnTxtRt.anchorMax = Vector2.one;
+        closeBtnTxtRt.offsetMin = Vector2.zero; closeBtnTxtRt.offsetMax = Vector2.zero;
+        
+        pauseTapePlayerPanel.SetActive(true);
+
+        // Инициализируем UI из сохраненного состояния магнитофона
+        tp.RefreshUI(tp.spoolLeft, tp.spoolRight, tp.ledIndicator, tp.channelTextDisplay);
+    }
+
+    public void HidePauseTapePlayerPanel()
+    {
+        if (sfxAudioSource != null && phonePickupSound != null) sfxAudioSource.PlayOneShot(phonePickupSound, 0.4f);
+        if (pauseTapePlayerPanel != null)
+        {
+            Destroy(pauseTapePlayerPanel);
+        }
+    }
+
+    private RectTransform CreatePauseVisualSpool(GameObject parent, string name, Vector2 pos)
+    {
+        GameObject spoolObj = new GameObject(name);
+        spoolObj.transform.SetParent(parent.transform, false);
+        
+        RectTransform rt = spoolObj.AddComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(130f, 130f);
+        rt.anchoredPosition = pos;
+
+        // Base circle
+        Image img = spoolObj.AddComponent<Image>();
+        img.color = new Color(0.22f, 0.22f, 0.22f, 1f);
+
+        // Outline
+        Outline outline = spoolObj.AddComponent<Outline>();
+        outline.effectColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+        outline.effectDistance = new Vector2(2f, -2f);
+
+        // Spokes
+        for (int i = 0; i < 4; i++)
+        {
+            GameObject spoke = new GameObject("Spoke_" + i);
+            spoke.transform.SetParent(spoolObj.transform, false);
+            
+            RectTransform spokeRt = spoke.AddComponent<RectTransform>();
+            spokeRt.sizeDelta = new Vector2(12f, 110f);
+            spokeRt.localEulerAngles = new Vector3(0, 0, i * 45f);
+
+            Image spokeImg = spoke.AddComponent<Image>();
+            spokeImg.color = new Color(0.1f, 0.1f, 0.1f, 1f);
+        }
+
+        // Center hub
+        GameObject hub = new GameObject("Hub");
+        hub.transform.SetParent(spoolObj.transform, false);
+        RectTransform hubRt = hub.AddComponent<RectTransform>();
+        hubRt.sizeDelta = new Vector2(30f, 30f);
+        Image hubImg = hub.AddComponent<Image>();
+        hubImg.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+
+        return rt;
+    }
+}
