@@ -2347,7 +2347,7 @@ public class GameManager : MonoBehaviour
             
             TextMeshProUGUI tmp = titleObj.AddComponent<TextMeshProUGUI>();
             tmp.text = isVictory ? "СМЕНА ОКОНЧЕНА" : "ВЫ УВОЛЕНЫ";
-            tmp.color = Color.white;
+            tmp.color = new Color(0.15f, 0.15f, 0.15f);
             tmp.fontSize = 28f;
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
@@ -2359,7 +2359,7 @@ public class GameManager : MonoBehaviour
             TextMeshProUGUI tmp = titleTrans.GetComponent<TextMeshProUGUI>();
             if (tmp != null)
             {
-                tmp.color = Color.white;
+                tmp.color = new Color(0.15f, 0.15f, 0.15f);
             }
         }
 
@@ -2463,11 +2463,7 @@ public class GameManager : MonoBehaviour
             menuBtnTrans = btnObj.transform;
             
             Image img = btnObj.AddComponent<Image>();
-            img.color = new Color(0.15f, 0.15f, 0.15f, 1f);
-            
-            Outline outline = btnObj.AddComponent<Outline>();
-            outline.effectColor = isVictory ? new Color(0f, 0.8f, 0f, 0.8f) : new Color(0.8f, 0f, 0f, 0.8f);
-            outline.effectDistance = new Vector2(2, -2);
+            img.color = new Color(1f, 1f, 1f, 0f);
             
             Button btn = btnObj.AddComponent<Button>();
             btn.onClick.AddListener(ReturnToMenu);
@@ -2480,7 +2476,7 @@ public class GameManager : MonoBehaviour
             tmp.fontSize = 20;
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
-            tmp.color = Color.white;
+            tmp.color = new Color(1f, 0.2f, 0.2f, 1f);
             
             RectTransform txtRt = txtObj.GetComponent<RectTransform>();
             txtRt.anchorMin = Vector2.zero;
@@ -2501,11 +2497,15 @@ public class GameManager : MonoBehaviour
                     btn.gameObject.AddComponent<MenuButtonHoverEffects>();
                 }
             }
+            Image img = menuBtnTrans.GetComponent<Image>();
+            if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
+            Outline outline = menuBtnTrans.GetComponent<Outline>();
+            if (outline != null) outline.enabled = false;
             TextMeshProUGUI tmp = menuBtnTrans.GetComponentInChildren<TextMeshProUGUI>(true);
             if (tmp != null)
             {
                 tmp.text = "В ГЛАВНОЕ МЕНЮ";
-                tmp.color = Color.white;
+                tmp.color = new Color(1f, 0.2f, 0.2f, 1f);
             }
         }
 
@@ -2538,11 +2538,7 @@ public class GameManager : MonoBehaviour
                 restartTrans = btnObj.transform;
                 
                 Image img = btnObj.AddComponent<Image>();
-                img.color = new Color(0.15f, 0.15f, 0.15f, 1f);
-                
-                Outline outline = btnObj.AddComponent<Outline>();
-                outline.effectColor = new Color(0.8f, 0f, 0f, 0.8f);
-                outline.effectDistance = new Vector2(2, -2);
+                img.color = new Color(1f, 1f, 1f, 0f);
                 
                 Button btn = btnObj.AddComponent<Button>();
                 btn.onClick.AddListener(LoadNextShift);
@@ -2555,7 +2551,7 @@ public class GameManager : MonoBehaviour
                 tmp.fontSize = 20;
                 tmp.fontStyle = FontStyles.Bold;
                 tmp.alignment = TextAlignmentOptions.Center;
-                tmp.color = Color.white;
+                tmp.color = new Color(1f, 0.2f, 0.2f, 1f);
                 
                 RectTransform txtRt = txtObj.GetComponent<RectTransform>();
                 txtRt.anchorMin = Vector2.zero;
@@ -2577,11 +2573,15 @@ public class GameManager : MonoBehaviour
                         btn.gameObject.AddComponent<MenuButtonHoverEffects>();
                     }
                 }
+                Image img = restartTrans.GetComponent<Image>();
+                if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
+                Outline outline = restartTrans.GetComponent<Outline>();
+                if (outline != null) outline.enabled = false;
                 TextMeshProUGUI tmp = restartTrans.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (tmp != null)
                 {
                     tmp.text = "НАЧАТЬ ЗАНОВО";
-                    tmp.color = Color.white;
+                    tmp.color = new Color(1f, 0.2f, 0.2f, 1f);
                 }
             }
         }
@@ -2615,11 +2615,7 @@ public class GameManager : MonoBehaviour
                 nextBtnTrans = btnObj.transform;
                 
                 Image img = btnObj.AddComponent<Image>();
-                img.color = new Color(0.15f, 0.15f, 0.15f, 1f);
-                
-                Outline outline = btnObj.AddComponent<Outline>();
-                outline.effectColor = new Color(0f, 0.8f, 0f, 0.8f);
-                outline.effectDistance = new Vector2(2, -2);
+                img.color = new Color(1f, 1f, 1f, 0f);
                 
                 Button btn = btnObj.AddComponent<Button>();
                 btn.onClick.AddListener(LoadNextShift);
@@ -2628,11 +2624,11 @@ public class GameManager : MonoBehaviour
                 GameObject txtObj = new GameObject("BtnText");
                 txtObj.transform.SetParent(btnObj.transform, false);
                 TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
-                tmp.text = "ПРОДОЛЖИТЬ ИГРУ";
+                tmp.text = "ПРОДОЛЖИТЬ СМЕНУ";
                 tmp.fontSize = 20;
                 tmp.fontStyle = FontStyles.Bold;
                 tmp.alignment = TextAlignmentOptions.Center;
-                tmp.color = Color.white;
+                tmp.color = new Color(1f, 0.2f, 0.2f, 1f);
                 
                 RectTransform txtRt = txtObj.GetComponent<RectTransform>();
                 txtRt.anchorMin = Vector2.zero;
@@ -2654,11 +2650,15 @@ public class GameManager : MonoBehaviour
                         btn.gameObject.AddComponent<MenuButtonHoverEffects>();
                     }
                 }
+                Image img = nextBtnTrans.GetComponent<Image>();
+                if (img != null) img.color = new Color(1f, 1f, 1f, 0f);
+                Outline outline = nextBtnTrans.GetComponent<Outline>();
+                if (outline != null) outline.enabled = false;
                 TextMeshProUGUI tmp = nextBtnTrans.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (tmp != null)
                 {
-                    tmp.text = "ПРОДОЛЖИТЬ ИГРУ";
-                    tmp.color = Color.white;
+                    tmp.text = "ПРОДОЛЖИТЬ СМЕНУ";
+                    tmp.color = new Color(1f, 0.2f, 0.2f, 1f);
                 }
             }
         }
@@ -2704,20 +2704,20 @@ public class GameManager : MonoBehaviour
             {
                 // Проверяем, активна ли кнопка продолжения смены
                 Transform nextBtn = clipboard.Find("NextShiftBtn");
+                if (nextBtn != null && currentShiftIndex + 1 < shiftsDatabase.Length)
+                {
+                    nextBtn.gameObject.SetActive(true);
+                }
                 bool isNextActive = nextBtn != null && nextBtn.gameObject.activeSelf;
 
-                PositionElementRuntime(clipboard, "TitleText", "VictoryTitle", 280f, 28f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StatsText", "VictoryStats", 100f, 13f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", 0f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -8f, stampApprovedRu);
+                PositionElementRuntime(clipboard, "TitleText", "VictoryTitle", 110f, 28f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StatsText", "VictoryStats", 30f, 13f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", -30f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -8f, stampApprovedRu);
 
+                PositionElementRuntime(clipboard, "MainMenuBtn", "ExitMenuBtn", -130f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
                 if (isNextActive)
                 {
                     PositionElementRuntime(clipboard, "NextShiftBtn", "ContinueShiftBtn", -220f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
-                    PositionElementRuntime(clipboard, "MainMenuBtn", "ExitMenuBtn", -320f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
-                }
-                else
-                {
-                    PositionElementRuntime(clipboard, "MainMenuBtn", "ExitMenuBtn", -220f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
                 }
             }
         }
@@ -2750,11 +2750,11 @@ public class GameManager : MonoBehaviour
 
             if (IsValidTransform(clipboard))
             {
-                PositionElementRuntime(clipboard, "TitleText", "GameOverTitle", 280f, 28f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StatsText", "GameOverReason", 40f, 13f, isText: true, isButton: false);
-                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", 20f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -12f, stampFiredRu);
+                PositionElementRuntime(clipboard, "TitleText", "GameOverTitle", 110f, 28f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StatsText", "GameOverReason", 30f, 13f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "StampImage", "PassportStamp", -30f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -12f, stampFiredRu);
+                PositionElementRuntime(clipboard, "MainMenuBtn", "ExitBtn", -130f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
                 PositionElementRuntime(clipboard, "RestartBtn", "RetryBtn", -220f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
-                PositionElementRuntime(clipboard, "MainMenuBtn", "ExitBtn", -320f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
             }
         }
     }
@@ -2812,7 +2812,7 @@ public class GameManager : MonoBehaviour
                     bool isTitle = primaryName.Contains("Title") || (!string.IsNullOrEmpty(secondaryName) && secondaryName.Contains("Title"));
                     tmp.fontStyle = isTitle ? FontStyles.Bold : FontStyles.Normal;
                     tmp.alignment = TextAlignmentOptions.Center;
-                    tmp.color = isTitle ? Color.white : new Color(0.15f, 0.15f, 0.15f); // Title is white, body text is dark gray
+                    tmp.color = new Color(0.15f, 0.15f, 0.15f); // Идеальный цвет пишущей машинки на бумаге планшета!
                     tmp.enableWordWrapping = true;
                 }
             }
@@ -2824,6 +2824,19 @@ public class GameManager : MonoBehaviour
                 {
                     btnTxt.fontSize = 20;
                     btnTxt.fontStyle = FontStyles.Bold;
+                    btnTxt.color = new Color(1f, 0.2f, 0.2f, 1f); // Force red/orange text!
+                }
+                
+                Image img = target.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.color = new Color(1f, 1f, 1f, 0f); // Force transparent background!
+                }
+
+                Outline outline = target.GetComponent<Outline>();
+                if (outline != null)
+                {
+                    outline.enabled = false; // Disable box outline!
                 }
             }
 
