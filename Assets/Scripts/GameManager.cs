@@ -2461,7 +2461,7 @@ public class GameManager : MonoBehaviour
             img.color = new Color(0.15f, 0.15f, 0.15f, 1f);
             
             Outline outline = btnObj.AddComponent<Outline>();
-            outline.effectColor = Color.white;
+            outline.effectColor = isVictory ? new Color(0f, 0.8f, 0f, 0.8f) : new Color(0.8f, 0f, 0f, 0.8f);
             outline.effectDistance = new Vector2(2, -2);
             
             Button btn = btnObj.AddComponent<Button>();
@@ -2475,6 +2475,7 @@ public class GameManager : MonoBehaviour
             tmp.fontSize = 20;
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = Color.white;
             
             RectTransform txtRt = txtObj.GetComponent<RectTransform>();
             txtRt.anchorMin = Vector2.zero;
@@ -2529,7 +2530,7 @@ public class GameManager : MonoBehaviour
                 img.color = new Color(0.15f, 0.15f, 0.15f, 1f);
                 
                 Outline outline = btnObj.AddComponent<Outline>();
-                outline.effectColor = Color.white;
+                outline.effectColor = new Color(0.8f, 0f, 0f, 0.8f);
                 outline.effectDistance = new Vector2(2, -2);
                 
                 Button btn = btnObj.AddComponent<Button>();
@@ -2543,6 +2544,7 @@ public class GameManager : MonoBehaviour
                 tmp.fontSize = 20;
                 tmp.fontStyle = FontStyles.Bold;
                 tmp.alignment = TextAlignmentOptions.Center;
+                tmp.color = Color.white;
                 
                 RectTransform txtRt = txtObj.GetComponent<RectTransform>();
                 txtRt.anchorMin = Vector2.zero;
@@ -2588,7 +2590,38 @@ public class GameManager : MonoBehaviour
                     }
                 }
             }
-            if (IsValidTransform(nextBtnTrans))
+            if (!IsValidTransform(nextBtnTrans))
+            {
+                GameObject btnObj = new GameObject("NextShiftBtn");
+                btnObj.transform.SetParent(clipTrans, false);
+                nextBtnTrans = btnObj.transform;
+                
+                Image img = btnObj.AddComponent<Image>();
+                img.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+                
+                Outline outline = btnObj.AddComponent<Outline>();
+                outline.effectColor = new Color(0f, 0.8f, 0f, 0.8f);
+                outline.effectDistance = new Vector2(2, -2);
+                
+                Button btn = btnObj.AddComponent<Button>();
+                btn.onClick.AddListener(LoadNextShift);
+                btnObj.AddComponent<MenuButtonHoverEffects>();
+                
+                GameObject txtObj = new GameObject("BtnText");
+                txtObj.transform.SetParent(btnObj.transform, false);
+                TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
+                tmp.text = "ПРОДОЛЖИТЬ СМЕНУ";
+                tmp.fontSize = 20;
+                tmp.fontStyle = FontStyles.Bold;
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.color = Color.white;
+                
+                RectTransform txtRt = txtObj.GetComponent<RectTransform>();
+                txtRt.anchorMin = Vector2.zero;
+                txtRt.anchorMax = Vector2.one;
+                txtRt.sizeDelta = Vector2.zero;
+            }
+            else
             {
                 nextBtnTrans.SetParent(clipTrans, false);
                 nextBtnTrans.name = "NextShiftBtn";
