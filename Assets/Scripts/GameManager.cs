@@ -285,10 +285,6 @@ public class GameManager : MonoBehaviour
 
         if (index >= currentShift.shiftVisitors.Length)
         {
-            // Сохранение следующей смены в реестр при успешном прохождении уровня
-            PlayerPrefs.SetInt("CurrentShift", currentShiftIndex + 1);
-            PlayerPrefs.Save();
-            
             if (quotaTextDisplay != null) quotaTextDisplay.text = "Очередь: 0";
             
             EndShift("Смена окончена! Все проверены.");
@@ -555,6 +551,10 @@ public class GameManager : MonoBehaviour
     {
         isShiftActive = false;
         Debug.Log("ПОБЕДА! " + message + " Ошибок: " + strikes);
+
+        // Сохранение следующей смены в реестр при успешном прохождении уровня
+        PlayerPrefs.SetInt("CurrentShift", currentShiftIndex + 1);
+        PlayerPrefs.Save();
 
         // ДОСТИЖЕНИЯ
         if (AchievementsManager.instance != null)
