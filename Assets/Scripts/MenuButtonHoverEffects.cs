@@ -29,9 +29,12 @@ public class MenuButtonHoverEffects : MonoBehaviour, IPointerEnterHandler, IPoin
              transform.parent.name.Contains("Victory") || 
              transform.parent.name.Contains("GameOver") || 
              transform.parent.name.Contains("Newspaper") ||
+             transform.parent.name.Contains("Clipboard") || // Clipboard is parent of end screen buttons
              transform.name.Contains("Resume") || 
              transform.name.Contains("Exit") || 
              transform.name.Contains("NextShift") || 
+             transform.name.Contains("Restart") || 
+             transform.name.Contains("MainMenu") || 
              transform.name.Contains("CloseNewspaper"));
 
         if (!isMainMenu && !isAllowedUI)

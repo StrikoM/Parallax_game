@@ -2347,7 +2347,7 @@ public class GameManager : MonoBehaviour
             
             TextMeshProUGUI tmp = titleObj.AddComponent<TextMeshProUGUI>();
             tmp.text = isVictory ? "СМЕНА ОКОНЧЕНА" : "ВЫ УВОЛЕНЫ";
-            tmp.color = new Color(0.15f, 0.15f, 0.15f);
+            tmp.color = isVictory ? new Color(0.15f, 0.15f, 0.15f) : Color.white;
             tmp.fontSize = 28f;
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
@@ -2359,7 +2359,7 @@ public class GameManager : MonoBehaviour
             TextMeshProUGUI tmp = titleTrans.GetComponent<TextMeshProUGUI>();
             if (tmp != null)
             {
-                tmp.color = new Color(0.15f, 0.15f, 0.15f);
+                tmp.color = isVictory ? new Color(0.15f, 0.15f, 0.15f) : Color.white;
             }
         }
 
@@ -2750,7 +2750,7 @@ public class GameManager : MonoBehaviour
 
             if (IsValidTransform(clipboard))
             {
-                PositionElementRuntime(clipboard, "TitleText", "GameOverTitle", 110f, 28f, isText: true, isButton: false);
+                PositionElementRuntime(clipboard, "TitleText", "GameOverTitle", 110f, 28f, isText: true, isButton: false, textColor: Color.white);
                 PositionElementRuntime(clipboard, "StatsText", "GameOverReason", 30f, 13f, isText: true, isButton: false);
                 PositionElementRuntime(clipboard, "StampImage", "PassportStamp", -30f, 0f, isText: false, isButton: false, new Vector2(240f, 120f), -12f, stampFiredRu);
                 PositionElementRuntime(clipboard, "MainMenuBtn", "ExitBtn", -130f, 20f, isText: false, isButton: true, new Vector2(260f, 50f));
@@ -2759,7 +2759,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void PositionElementRuntime(Transform parent, string primaryName, string secondaryName, float yPos, float sizeVal, bool isText, bool isButton, Vector2? sizeDelta = null, float? rotZ = null, Sprite spriteVal = null)
+    private void PositionElementRuntime(Transform parent, string primaryName, string secondaryName, float yPos, float sizeVal, bool isText, bool isButton, Vector2? sizeDelta = null, float? rotZ = null, Sprite spriteVal = null, Color? textColor = null)
     {
         if (!IsValidTransform(parent)) return;
 
@@ -2812,7 +2812,7 @@ public class GameManager : MonoBehaviour
                     bool isTitle = primaryName.Contains("Title") || (!string.IsNullOrEmpty(secondaryName) && secondaryName.Contains("Title"));
                     tmp.fontStyle = isTitle ? FontStyles.Bold : FontStyles.Normal;
                     tmp.alignment = TextAlignmentOptions.Center;
-                    tmp.color = new Color(0.15f, 0.15f, 0.15f); // Идеальный цвет пишущей машинки на бумаге планшета!
+                    tmp.color = textColor ?? new Color(0.15f, 0.15f, 0.15f); // Идеальный цвет пишущей машинки на бумаге планшета!
                     tmp.enableWordWrapping = true;
                 }
             }
