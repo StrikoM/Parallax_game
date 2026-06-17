@@ -2519,7 +2519,37 @@ public class GameManager : MonoBehaviour
                     }
                 }
             }
-            if (IsValidTransform(restartTrans))
+            if (!IsValidTransform(restartTrans))
+            {
+                GameObject btnObj = new GameObject("RestartBtn");
+                btnObj.transform.SetParent(clipTrans, false);
+                restartTrans = btnObj.transform;
+                
+                Image img = btnObj.AddComponent<Image>();
+                img.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+                
+                Outline outline = btnObj.AddComponent<Outline>();
+                outline.effectColor = Color.white;
+                outline.effectDistance = new Vector2(2, -2);
+                
+                Button btn = btnObj.AddComponent<Button>();
+                btn.onClick.AddListener(LoadNextShift);
+                btnObj.AddComponent<MenuButtonHoverEffects>();
+                
+                GameObject txtObj = new GameObject("BtnText");
+                txtObj.transform.SetParent(btnObj.transform, false);
+                TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
+                tmp.text = "НАЧАТЬ ЗАНОВО";
+                tmp.fontSize = 20;
+                tmp.fontStyle = FontStyles.Bold;
+                tmp.alignment = TextAlignmentOptions.Center;
+                
+                RectTransform txtRt = txtObj.GetComponent<RectTransform>();
+                txtRt.anchorMin = Vector2.zero;
+                txtRt.anchorMax = Vector2.one;
+                txtRt.sizeDelta = Vector2.zero;
+            }
+            else
             {
                 restartTrans.SetParent(clipTrans, false);
                 restartTrans.name = "RestartBtn";
