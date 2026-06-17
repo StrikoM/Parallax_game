@@ -2347,7 +2347,7 @@ public class GameManager : MonoBehaviour
             
             TextMeshProUGUI tmp = titleObj.AddComponent<TextMeshProUGUI>();
             tmp.text = isVictory ? "СМЕНА ОКОНЧЕНА" : "ВЫ УВОЛЕНЫ";
-            tmp.color = new Color(0.12f, 0.12f, 0.12f);
+            tmp.color = Color.white;
             tmp.fontSize = 28f;
             tmp.fontStyle = FontStyles.Bold;
             tmp.alignment = TextAlignmentOptions.Center;
@@ -2356,6 +2356,11 @@ public class GameManager : MonoBehaviour
         {
             titleTrans.SetParent(clipTrans, false);
             titleTrans.name = "TitleText";
+            TextMeshProUGUI tmp = titleTrans.GetComponent<TextMeshProUGUI>();
+            if (tmp != null)
+            {
+                tmp.color = Color.white;
+            }
         }
 
         // б) StatsText
@@ -2496,6 +2501,12 @@ public class GameManager : MonoBehaviour
                     btn.gameObject.AddComponent<MenuButtonHoverEffects>();
                 }
             }
+            TextMeshProUGUI tmp = menuBtnTrans.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (tmp != null)
+            {
+                tmp.text = "В ГЛАВНОЕ МЕНЮ";
+                tmp.color = Color.white;
+            }
         }
 
         // д) RestartBtn (только для GameOverPanel)
@@ -2555,6 +2566,7 @@ public class GameManager : MonoBehaviour
             {
                 restartTrans.SetParent(clipTrans, false);
                 restartTrans.name = "RestartBtn";
+                restartTrans.gameObject.SetActive(true);
                 Button btn = restartTrans.GetComponent<Button>();
                 if (btn != null)
                 {
@@ -2564,6 +2576,12 @@ public class GameManager : MonoBehaviour
                     {
                         btn.gameObject.AddComponent<MenuButtonHoverEffects>();
                     }
+                }
+                TextMeshProUGUI tmp = restartTrans.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (tmp != null)
+                {
+                    tmp.text = "НАЧАТЬ ЗАНОВО";
+                    tmp.color = Color.white;
                 }
             }
         }
@@ -2610,7 +2628,7 @@ public class GameManager : MonoBehaviour
                 GameObject txtObj = new GameObject("BtnText");
                 txtObj.transform.SetParent(btnObj.transform, false);
                 TextMeshProUGUI tmp = txtObj.AddComponent<TextMeshProUGUI>();
-                tmp.text = "ПРОДОЛЖИТЬ СМЕНУ";
+                tmp.text = "ПРОДОЛЖИТЬ ИГРУ";
                 tmp.fontSize = 20;
                 tmp.fontStyle = FontStyles.Bold;
                 tmp.alignment = TextAlignmentOptions.Center;
@@ -2625,6 +2643,7 @@ public class GameManager : MonoBehaviour
             {
                 nextBtnTrans.SetParent(clipTrans, false);
                 nextBtnTrans.name = "NextShiftBtn";
+                nextBtnTrans.gameObject.SetActive(true);
                 Button btn = nextBtnTrans.GetComponent<Button>();
                 if (btn != null)
                 {
@@ -2634,6 +2653,12 @@ public class GameManager : MonoBehaviour
                     {
                         btn.gameObject.AddComponent<MenuButtonHoverEffects>();
                     }
+                }
+                TextMeshProUGUI tmp = nextBtnTrans.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (tmp != null)
+                {
+                    tmp.text = "ПРОДОЛЖИТЬ ИГРУ";
+                    tmp.color = Color.white;
                 }
             }
         }
@@ -2784,9 +2809,10 @@ public class GameManager : MonoBehaviour
                 if (tmp != null)
                 {
                     tmp.fontSize = sizeVal;
-                    tmp.fontStyle = primaryName.Contains("Title") || secondaryName.Contains("Title") ? FontStyles.Bold : FontStyles.Normal;
+                    bool isTitle = primaryName.Contains("Title") || (!string.IsNullOrEmpty(secondaryName) && secondaryName.Contains("Title"));
+                    tmp.fontStyle = isTitle ? FontStyles.Bold : FontStyles.Normal;
                     tmp.alignment = TextAlignmentOptions.Center;
-                    tmp.color = new Color(0.15f, 0.15f, 0.15f); // Идеальный цвет пишущей машинки на бумаге планшета!
+                    tmp.color = isTitle ? Color.white : new Color(0.15f, 0.15f, 0.15f); // Title is white, body text is dark gray
                     tmp.enableWordWrapping = true;
                 }
             }
