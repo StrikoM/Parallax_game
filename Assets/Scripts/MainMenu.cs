@@ -38,8 +38,9 @@ public class MainMenu : MonoBehaviour
         // Полная очистка остаточных UI-элементов из сцены геймплея
         DestroyPersistentUI();
 
-        // Проверяем прогресс игрока
+        // Чтение текущей смены из реестра для кнопки Продолжить
         int currentShift = PlayerPrefs.GetInt("CurrentShift", 0);
+        // Чтение разблокированной смены из реестра
         int unlockedShift = PlayerPrefs.GetInt("UnlockedShift", 0);
         
         // Синхронизируем анлок, если текущая смена выше разблокированной
@@ -129,12 +130,14 @@ public class MainMenu : MonoBehaviour
         }
     }
 
+    // Продолжение игры (загрузка сохраненной смены)
     public void ContinueGame()
     {
         if (uiAudioSource != null && buttonClickSound != null) uiAudioSource.PlayOneShot(buttonClickSound);
         StartCoroutine(LoadSceneWithDelay("GameScene"));
     }
 
+    // Запуск новой игры (сброс смены на 0)
     public void NewGame()
     {
         PlayerPrefs.SetInt("CurrentShift", 0);

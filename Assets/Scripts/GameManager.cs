@@ -150,7 +150,7 @@ public class GameManager : MonoBehaviour
     {
         // Создание текста для охранника удалено, так как теперь он использует общую панель диалогов.
 
-        // Читаем из сохранений, на каком мы дне
+        // Чтение текущей смены из реестра при старте уровня
         currentShiftIndex = PlayerPrefs.GetInt("CurrentShift", 0);
         currentStunCharges = maxStunCharges;
 
@@ -285,7 +285,7 @@ public class GameManager : MonoBehaviour
 
         if (index >= currentShift.shiftVisitors.Length)
         {
-            // Прошли уровень успешно! Сохраняем прогресс (переход на следующий день)
+            // Сохранение следующей смены в реестр при успешном прохождении уровня
             PlayerPrefs.SetInt("CurrentShift", currentShiftIndex + 1);
             PlayerPrefs.Save();
             
