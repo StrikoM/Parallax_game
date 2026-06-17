@@ -154,6 +154,24 @@ public class TapePlayer : MonoBehaviour
         }
     }
 
+    public void RefreshUI(RectTransform left, RectTransform right, Image led, TextMeshProUGUI textDisplay)
+    {
+        spoolLeft = left;
+        spoolRight = right;
+        ledIndicator = led;
+        channelTextDisplay = textDisplay;
+        
+        if (isPlaying)
+        {
+            UpdateChannelText();
+        }
+        else
+        {
+            if (channelTextDisplay != null) channelTextDisplay.text = "МАГНИТОФОН ВЫКЛЮЧЕН";
+            if (ledIndicator != null) ledIndicator.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+        }
+    }
+
     public void TogglePlay()
     {
         isPlaying = !isPlaying;
