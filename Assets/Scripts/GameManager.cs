@@ -3415,43 +3415,52 @@ public class GameManager : MonoBehaviour
         if (pausePanel == null) return;
         if (pausePanel.transform.Find("TapePlayerButton") != null) return;
 
-        // Ищем кнопку выхода или настроек для шаблона стиля и положения
+        // Находим все кнопки панели паузы
+        Transform resumeRt = pausePanel.transform.Find("ResumeBtn");
+        Transform settingsRt = pausePanel.transform.Find("SettingsBtn");
         Transform exitRt = pausePanel.transform.Find("ExitBtn");
         if (exitRt == null) exitRt = pausePanel.transform.Find("ExitMenuBtn");
         if (exitRt == null) exitRt = pausePanel.transform.Find("ExitButton");
-        
-        // Если не нашли кнопку выхода, берем любую кнопку как шаблон
+
+        // Берем шаблон, чтобы скопировать
         Button templateBtn = pausePanel.GetComponentInChildren<Button>(true);
         if (templateBtn == null) return;
 
-        // Клонируем кнопку выхода (или шаблон)
+        // Создаем кнопку магнитофона (копируем шаблон)
         GameObject tapeBtnObj = Instantiate(templateBtn.gameObject, pausePanel.transform);
         tapeBtnObj.name = "TapePlayerButton";
 
         RectTransform tapeRt = tapeBtnObj.GetComponent<RectTransform>();
+
+        // Задаем точные и идеально выверенные позиции для всех 4 кнопок
+        // С центром-к-центру расстоянием ровно 130 единиц (высота кнопок 80 + отступ 50)
+        if (resumeRt != null)
+        {
+            resumeRt.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0f, 130f, 0f);
+        }
+        if (settingsRt != null)
+        {
+            settingsRt.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0f, 0f, 0f);
+        }
         
-        // Если нашли кнопку выхода, позиционируем красивой стопкой
+        // Магнитофон ставим на Y = -130
+        tapeRt.anchoredPosition3D = new Vector3(0f, -130f, 0f);
+
         if (exitRt != null)
         {
-            RectTransform exitRect = exitRt.GetComponent<RectTransform>();
-            Vector3 originalExitPos = exitRect.anchoredPosition3D;
+            // Кнопку выхода сдвигаем на Y = -260
+            exitRt.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0f, -260f, 0f);
             
-            // Сдвигаем кнопку Выхода на 80 единиц вниз
-            exitRect.anchoredPosition3D = originalExitPos + new Vector3(0, -80f, 0);
-            
-            // Нашу кнопку магнитофона ставим на старое место кнопки Выхода
-            tapeRt.anchoredPosition3D = originalExitPos;
-            
-            // Убеждаемся в правильном порядке рендеринга (Sibling Index)
+            // Сортировка по иерархии (Sibling Index), чтобы кнопка Магнитофона была перед Выходом
             tapeBtnObj.transform.SetSiblingIndex(exitRt.GetSiblingIndex());
         }
 
-        // Меняем текст кнопки
+        // Устанавливаем текст кнопки
         TextMeshProUGUI txt = tapeBtnObj.GetComponentInChildren<TextMeshProUGUI>(true);
         if (txt != null)
         {
             txt.text = "МАГНИТОФОН";
-            txt.fontSize = 18f;
+            // Не занижаем шрифт принудительно, позволяя ему наследоваться от шаблона (размер 32)
         }
 
         Button btn = tapeBtnObj.GetComponent<Button>();
